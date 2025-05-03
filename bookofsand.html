@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>The Book of Sand</title>
+  <style>
+    body {
+      background: #f5f2ea;
+      color: #333;
+      font-family: Georgia, serif;
+      margin: 0;
+      padding: 0;
+    }
+    #page {
+      width: 600px;
+      margin: 50px auto;
+      padding: 40px;
+      background: #fff;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+    h1 { text-align: center; font-size: 1em; margin-bottom: 20px; }
+    h2 { text-align: center; font-size: 1.2em; margin: 10px 0; }
+    img { display: block; max-width: 100%; margin: 0 auto 20px; }
+    .content { text-align: justify; line-height: 1.6; max-height: 70vh; overflow: hidden; }
+    #next-btn, #home-btn {
+      display: block;
+      margin: 20px auto 0;
+      padding: 10px 20px;
+      background: #333;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 1em;
+      border-radius: 5px;
+      text-decoration: none;
+      text-align: center;
+    }
+    #home-btn { display: none; }
+  </style>
+</head>
+<body>
+  <div id="page">
+    <h1 id="page-number"></h1>
+    <div id="intro">
+      <img id="start-image" src="4756d1f1-5ebd-45f7-bc71-088e3131a81b.jpeg" alt="Cover Illustration" style="display:block;max-width:100%;margin:0 auto 20px;">
+      <p>This is a digital implementation of <em>The Book of Sand</em> by Jorge Luis Borges.</p>
+      <p><em>Study the page well. You will never see it again.</em></p>
+    </div>
+    <h2 id="article-title" style="display:none;"></h2>
+    <img id="article-image" src="" alt="Article Illustration" style="display:none;">
+    <div class="content" id="article-content" style="display:none;"></div>
+    <button id="next-btn">Next Page</button>
+    <button id="home-btn">Home</button>
+  </div>
+  <script>
+    const languages = ['en','es','de','fr','ru','zh','ja','ar','pt','it'];
+    const pageNumberEl = document.getElementById('page-number');
+    const introEl = document.getElementById('intro');
+    const articleTitleEl = document.getElementById('article-title');
+    const articleImageEl = document.getElementById('article-image');
+    const articleContentEl = document.getElementById('article-content');
+    const nextBtn = document.getElementById('next-btn');
+    const homeBtn = document.getElementById('home-btn');
+
+    function getRandomPageNumber() {
+      return Math.floor(Math.random() * 1e8);
+    }
+
+    async function fetchArticle() {
+      const lang = languages[Math.floor(Math.random() * languages.length)];
+      const query1 = `https://${lang}.wikipedia.org/w/api.php?origin=*&action=query&format=json&generator=random&grnnamespace=0&prop=extracts|images&exintro=1&explaintext=1&exchars=2000`;
+      const res1 = await fetch(query1);
+      const data1 = await res1.json();
+      const pages = data1.query.pages;
+      const pageId = Object.keys(pages)[0];
+      const page = pages[pageId];
+      const images = (page.images || []).map(img => img.title).filter(title => /\.(jpg|jpeg|png|gif)$/i.test(title));
+      if (!images.length) return null;
+      const randomTitle = images[Math.floor(Math.random() * images.length)];
+      const titleParam = encodeURIComponent(randomTitle);
+      const query2 = `https://${lang}.wikipedia.org/w/api.php?origin=*&action=query&format=json&titles=${titleParam}&prop=imageinfo&iiprop=url`;
+      const res2 = await fetch(query2);
+      const data2 = await res2.json();
+      const imgPage = data2.query.pages;
+      const imgInfo = imgPage[Object.keys(imgPage)[0]].imageinfo;
+      const imageUrl = imgInfo && imgInfo[0].url;
+      return { title: page.title, extract: page.extract, image: imageUrl };
+    }
+
+    async function renderPage() {
+      let info = null;
+      while (!info) {
+        info = await fetchArticle();
+      }
+      introEl.style.display = 'none';
+      pageNumberEl.style.display = 'block';
+      articleTitleEl.style.display = 'block';
+      articleImageEl.style.display = 'block';
+      articleContentEl.style.display = 'block';
+      homeBtn.style.display = 'block';
+
+      pageNumberEl.textContent = `Page ${getRandomPageNumber()}`;
+      articleTitleEl.textContent = info.title;
+      articleImageEl.src = info.image;
+
+      const words = info.extract.trim().split(/\s+/);
+      const limited = words.slice(0, 300).join(' ');
+      articleContentEl.textContent = limited + (words.length > 300 ? '…' : '');
+    }
+
+    nextBtn.addEventListener('click', renderPage);
+    homeBtn.addEventListener('click', () => {
+      introEl.style.display = 'block';
+      pageNumberEl.style.display = 'none';
+      articleTitleEl.style.display = 'none';
+      articleImageEl.style.display = 'none';
+      articleContentEl.style.display = 'none';
+      homeBtn.style.display = 'none';
+    });
+
+    window.onload = () => { pageNumberEl.style.display = 'none'; };
+  </script>
+</body>
+</html>
